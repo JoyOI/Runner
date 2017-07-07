@@ -45,5 +45,5 @@ Input:
 Output:
 	stdout.txt
 	stderr.txt
-	result.json
+	runner.json
 ```
