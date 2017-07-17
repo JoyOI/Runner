@@ -39,11 +39,25 @@ Generate windows executable:
 
 ``` txt
 Input:
-	First Line: execute time limit in milliseconds
-	Second Line: command line
+	First Line: user_time_limit_in_milliseconds [total_time_limit_in_milliseconds]
+	Second Line: command_line
 	stdin.txt (optional)
 Output:
 	stdout.txt
 	stderr.txt
 	runner.json
+```
+
+runner.json example:
+
+``` txt
+{
+	"Error": "",
+	"Command": "sleep 1",
+	"IsTimeout": false,
+	"UserTime": 0,
+	"TotalTime": 1018,
+	"PeakMemory": 770048,
+	"ExitCode": 0
+}
 ```
