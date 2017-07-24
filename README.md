@@ -29,6 +29,8 @@ Install pyinstaller:
 %LOCALAPPDATA%\Programs\Python\Python35-32\Scripts\pip.exe install pyinstaller
 ```
 
+Modify runner, set `RunAs = None`
+
 Generate windows executable:
 
 ``` txt
