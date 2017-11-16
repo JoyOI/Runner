@@ -12,6 +12,22 @@ StdinPath = "stdin.txt"
 StdoutPath = "stdout.txt"
 StderrPath = "stderr.txt"
 RunAs = "runner" # set to None if use root or not on linux
+ReserveMemory = 100*1024*1024 # 100MB
+MaxMemory = 1*1024*1024*1024 # 1GB
+
+def updateMaxMemory():
+	global MaxMemory
+	memAvailable = MaxMemory
+	cgroupLimit = MaxMemory
+	with open("/proc/meminfo", "rb") as result:
+		for line in result:
+			if line.startswith(b"MemAvailable:"):
+				memAvailable = int(line.split()[1]) * 1024
+	with open("/sys/fs/cgroup/memory/memory.stat", "rb") as result:
+		for line in result:
+			if line.startswith(b"hierarchical_memory_limit"):
+				cgroupLimit = int(line.split()[1])
+	MaxMemory = min(MaxMemory, memAvailable, cgroupLimit) - ReserveMemory
 
 def clearFiles():
 	if os.path.isfile(ResultJsonPath):
@@ -103,6 +119,7 @@ def run(userLimitMs, totalLimitMs, cmdline):
 	peakMemory = 0 # RSS, not VMS
 	exitCode = None
 	isTimeout = False
+	isOOM = False
 	error = ""
 	cmdOption = [ "su", RunAs, "-c", cmdline ] if RunAs else cmdline
 	shellOption = False if RunAs else cmdline
@@ -139,6 +156,11 @@ def run(userLimitMs, totalLimitMs, cmdline):
 				error = "killed by timeout(total)"
 				killRecursive(psutilProc)
 				break
+			if peakMemory >= MaxMemory:
+				isOOM = True
+				error = "killed by OOM"
+				killRecursive(psutilProc)
+				break
 			time.sleep(0.001)
 		exitCode = proc.poll()
 		totalTime = nowInMillisecond() - startTime
@@ -159,6 +181,7 @@ def run(userLimitMs, totalLimitMs, cmdline):
 		"PeakMemory": peakMemory, # maybe 0 if process exited so quick
 		"ExitCode": exitCode,
 		"IsTimeout": isTimeout,
+		"IsOOM": isOOM,
 		"Error": error
 	})
 
@@ -176,6 +199,7 @@ def main():
 	limitTimeMs = 0
 	cmdline = ""
 	try:
+		updateMaxMemory()
 		clearFiles()
 		limitMs = input().split()
 		cmdline = input()
